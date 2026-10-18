@@ -1,0 +1,52 @@
+:root {
+  --npf-navy: #0b2545;
+  --npf-navy-dark: #071a33;
+  --npf-gold: #c9a227;
+}
+
+body { background-color: #f4f6f9; }
+
+.nrms-navbar { background-color: var(--npf-navy); border-bottom: 3px solid var(--npf-gold); }
+
+.nrms-sidebar {
+  width: 240px;
+  min-height: calc(100vh - 56px);
+  background-color: var(--npf-navy-dark);
+  padding-top: 1rem;
+}
+.nrms-sidebar .nav-link { color: #cbd5e1; padding: .65rem 1.25rem; font-size: .92rem; }
+.nrms-sidebar .nav-link:hover, .nrms-sidebar .nav-link.active {
+  background-color: rgba(201,162,39,.15); color: #fff; border-left: 3px solid var(--npf-gold);
+}
+.nrms-sidebar .bi { margin-right: .5rem; }
+
+.nrms-main { min-height: calc(100vh - 56px); }
+
+.stat-card { border: none; border-radius: .75rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.stat-card .stat-value { font-size: 1.9rem; font-weight: 700; }
+.stat-card .bi { font-size: 1.8rem; opacity: .25; }
+
+.badge-active { background-color: #198754; }
+.badge-retired { background-color: #6c757d; }
+.badge-transferred { background-color: #0dcaf0; color:#000; }
+.badge-suspended { background-color: #dc3545; }
+.badge-archived { background-color: #adb5bd; color:#000; }
+
+.landing-hero {
+  background: linear-gradient(135deg, var(--npf-navy) 0%, var(--npf-navy-dark) 100%);
+  color: #fff;
+  padding: 5rem 1rem;
+}
+.landing-hero .bi { color: var(--npf-gold); }
+
+.photo-thumb { width: 90px; height: 90px; object-fit: cover; border-radius: .5rem; border: 2px solid #dee2e6; }
+.photo-preview { width: 160px; height: 160px; object-fit: cover; border-radius: .5rem; border: 2px solid #dee2e6; }
+
+
+.landing-logo {
+    width: 150px;
+    height: 150px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}

@@ -1,0 +1,15 @@
+[10-Sep-2026 02:48:17 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'berriezl_nrms_db.featured_staff' doesn't exist in /home/berriezl/public_html/magnivoice/4god/index.php:6
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/4god/index.php(6): PDO->query('SELECT p.id, p....')
+#1 {main}
+  thrown in /home/berriezl/public_html/magnivoice/4god/index.php on line 6
+[10-Sep-2026 02:48:23 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'berriezl_nrms_db.featured_staff' doesn't exist in /home/berriezl/public_html/magnivoice/4god/index.php:6
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/4god/index.php(6): PDO->query('SELECT p.id, p....')
+#1 {main}
+  thrown in /home/berriezl/public_html/magnivoice/4god/index.php on line 6
+[10-Sep-2026 02:49:14 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'berriezl_nrms_db.featured_staff' doesn't exist in /home/berriezl/public_html/magnivoice/4god/index.php:6
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/4god/index.php(6): PDO->query('SELECT p.id, p....')
+#1 {main}
+  thrown in /home/berriezl/public_html/magnivoice/4god/index.php on line 6

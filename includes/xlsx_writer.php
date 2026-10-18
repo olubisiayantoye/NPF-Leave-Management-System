@@ -1,130 +1,115 @@
 <?php
 /**
- * Minimal XLSX writer — no Composer, no PhpSpreadsheet, just ZipArchive
- * and hand-built OOXML. Single sheet, header row + data rows, all cells
- * written as inline strings/numbers (no sharedStrings.xml needed, which
- * keeps this simple and keeps every value human-readable in the raw XML).
- *
- * Usage:
- *   write_xlsx('/tmp/out.xlsx', ['F-AP No', 'Name'], [['315443','A. Bello'], ...]);
+ * Minimal single-sheet .xlsx writer — no external dependencies. Every
+ * cell is written as an inline string, which keeps the writer simple
+ * and (deliberately) preserves things like leading zeros in phone
+ * numbers or AP numbers, since Excel won't reinterpret inline-string
+ * cells as numbers.
  */
-
-function xlsx_col_letter(int $index): string
+class XlsxWriter
 {
-    $letter = '';
-    $index++;
-    while ($index > 0) {
-        $mod = ($index - 1) % 26;
-        $letter = chr(65 + $mod) . $letter;
-        $index = intdiv($index - $mod, 26);
-    }
-    return $letter;
-}
+    private array $rows = [];
 
-function xlsx_cell_xml(int $colIndex, int $rowIndex, $value): string
-{
-    $ref = xlsx_col_letter($colIndex) . $rowIndex;
-
-    if ($value === null || $value === '') {
-        return "<c r=\"{$ref}\"/>";
-    }
-    if (is_numeric($value) && !preg_match('/^0\d/', (string) $value)) {
-        // Numeric — but keep things like "07/10" or "0123" as text via the leading-zero guard above.
-        $v = htmlspecialchars((string) $value, ENT_XML1);
-        return "<c r=\"{$ref}\"><v>{$v}</v></c>";
+    public function addRow(array $cells): void
+    {
+        $this->rows[] = $cells;
     }
 
-    $v = htmlspecialchars((string) $value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
-    return "<c r=\"{$ref}\" t=\"inlineStr\"><is><t xml:space=\"preserve\">{$v}</t></is></c>";
-}
-
-function write_xlsx(string $path, array $headers, array $rows): bool
-{
-    $zip = new ZipArchive();
-    if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-        return false;
-    }
-
-    $zip->addFromString('[Content_Types].xml',
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' .
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' .
-        '<Default Extension="xml" ContentType="application/xml"/>' .
-        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' .
-        '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' .
-        '</Types>'
-    );
-
-    $zip->addFromString('_rels/.rels',
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' .
-        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' .
-        '</Relationships>'
-    );
-
-    $zip->addFromString('xl/_rels/workbook.xml.rels',
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' .
-        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' .
-        '</Relationships>'
-    );
-
-    $zip->addFromString('xl/workbook.xml',
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' .
-        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' .
-        '<sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets>' .
-        '</workbook>'
-    );
-
-    $rowsXml = '';
-
-    // Header row (bold not implemented — kept dependency-free; still perfectly readable data)
-    $cells = '';
-    foreach ($headers as $i => $h) {
-        $cells .= xlsx_cell_xml($i, 1, $h);
-    }
-    $rowsXml .= "<row r=\"1\">{$cells}</row>";
-
-    foreach ($rows as $rIdx => $row) {
-        $rowNum = $rIdx + 2;
-        $cells = '';
-        foreach (array_values($row) as $cIdx => $val) {
-            $cells .= xlsx_cell_xml($cIdx, $rowNum, $val);
+    private function columnLetter(int $index): string
+    {
+        $index++; // to 1-based
+        $letter = '';
+        while ($index > 0) {
+            $mod = ($index - 1) % 26;
+            $letter = chr(65 + $mod) . $letter;
+            $index = intdiv($index - $mod, 26);
         }
-        $rowsXml .= "<row r=\"{$rowNum}\">{$cells}</row>";
+        return $letter;
     }
 
-    $zip->addFromString('xl/worksheets/sheet1.xml',
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' .
-        "<sheetData>{$rowsXml}</sheetData>" .
-        '</worksheet>'
-    );
+    private function xmlEscape(string $value): string
+    {
+        return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
+    }
 
-    $zip->close();
-    return true;
-}
+    private function buildSheetXml(): string
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' . "\n";
+        $xml .= '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+        $xml .= '<sheetData>';
 
-/** Streams an XLSX file as a download built from $columns (label=>rowKey) and $rows, then exits. */
-function export_xlsx(string $filename, array $columns, array $rows): never
-{
-    $tmp = tempnam(sys_get_temp_dir(), 'xlsx');
-    $headers = array_keys($columns);
-    $dataRows = [];
-    foreach ($rows as $row) {
-        $line = [];
-        foreach ($columns as $key) {
-            $line[] = $row[$key] ?? '';
+        foreach ($this->rows as $rowIndex => $cells) {
+            $rowNum = $rowIndex + 1;
+            $xml .= '<row r="' . $rowNum . '">';
+            foreach ($cells as $colIndex => $value) {
+                $ref = $this->columnLetter($colIndex) . $rowNum;
+                $xml .= '<c r="' . $ref . '" t="inlineStr"><is><t xml:space="preserve">'
+                      . $this->xmlEscape((string)$value) . '</t></is></c>';
+            }
+            $xml .= '</row>';
         }
-        $dataRows[] = $line;
-    }
-    write_xlsx($tmp, $headers, $dataRows);
 
-    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Content-Length: ' . filesize($tmp));
-    readfile($tmp);
-    unlink($tmp);
-    exit;
+        $xml .= '</sheetData></worksheet>';
+        return $xml;
+    }
+
+    public function save(string $path): void
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Could not create the .xlsx file.');
+        }
+
+        $zip->addFromString('[Content_Types].xml',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' .
+            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' .
+            '<Default Extension="xml" ContentType="application/xml"/>' .
+            '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' .
+            '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' .
+            '</Types>'
+        );
+
+        $zip->addFromString('_rels/.rels',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' .
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' .
+            '</Relationships>'
+        );
+
+        $zip->addFromString('xl/workbook.xml',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" ' .
+            'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' .
+            '<sheets><sheet name="Template" sheetId="1" r:id="rId1"/></sheets>' .
+            '</workbook>'
+        );
+
+        $zip->addFromString('xl/_rels/workbook.xml.rels',
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' .
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' .
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' .
+            '</Relationships>'
+        );
+
+        $zip->addFromString('xl/worksheets/sheet1.xml', $this->buildSheetXml());
+
+        $zip->close();
+    }
+
+    /**
+     * Streams the workbook straight to the HTTP response instead of a temp
+     * file on disk, with the correct headers for a browser download.
+     */
+    public function output(string $filename): void
+    {
+        $tmpPath = tempnam(sys_get_temp_dir(), 'nrms_xlsx_');
+        $this->save($tmpPath);
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($tmpPath));
+        readfile($tmpPath);
+        unlink($tmpPath);
+    }
 }

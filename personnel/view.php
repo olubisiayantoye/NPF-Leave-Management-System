@@ -1,170 +1,181 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/functions.php';
-require_once __DIR__ . '/../includes/auth.php';
-
+start_secure_session();
 require_login();
-$user = current_user();
-$roles = $user['roles'];
-$canApply = current_user_has_permission('leave.apply');
 
-$id = (int) ($_GET['id'] ?? 0);
-if (!$id) {
-    flash_set('error', 'No personnel record specified.');
-    redirect('personnel/search.php');
-}
-
+$id = (int)($_GET['id'] ?? 0);
 $stmt = db()->prepare(
-    'SELECT p.*, r.name AS rank_name, d.name AS department_name,
-            s.name AS section_name, c.name AS command_name
+    "SELECT p.*, d.name AS dept_name, r.name AS rank_name, s.name AS state_name, l.name AS lga_name,
+            t.name AS tribe_name, z.name AS zone_name, c.name AS command_name, b.name AS bank_name,
+            pfa.name AS pfa_name
      FROM personnel p
-     JOIN ranks r ON r.id = p.rank_id
-     JOIN departments d ON d.id = p.department_id
-     LEFT JOIN sections s ON s.id = p.section_id
-     LEFT JOIN commands c ON c.id = p.command_id
-     WHERE p.id = :id'
+     LEFT JOIN departments d ON d.id = p.department_id
+     LEFT JOIN ranks r ON r.id = p.rank_id
+     LEFT JOIN states s ON s.id = p.state_id
+     LEFT JOIN local_governments l ON l.id = p.lga_id
+     LEFT JOIN tribes t ON t.id = p.tribe_id
+     LEFT JOIN geo_political_zones z ON z.id = p.zone_id
+     LEFT JOIN commands c ON c.id = p.previous_command_id
+     LEFT JOIN banks b ON b.id = p.bank_id
+     LEFT JOIN pfas pfa ON pfa.id = p.pfa_id
+     WHERE p.id = ?"
 );
-$stmt->execute(['id' => $id]);
-$person = $stmt->fetch();
+$stmt->execute([$id]);
+$p = $stmt->fetch();
+if (!$p) { flash('error', 'Personnel record not found.'); header('Location: ' . url('/personnel/list.php')); exit; }
 
-if (!$person) {
-    flash_set('error', 'That personnel record could not be found.');
-    redirect('personnel/search.php');
-}
-
-$currentYear = date('Y');
-$entStmt = db()->prepare(
-    'SELECT lt.name AS leave_type, le.entitled_days, le.used_days
-     FROM leave_entitlements le
-     JOIN leave_types lt ON lt.id = le.leave_type_id
-     WHERE le.personnel_id = :id AND le.year = :year
-     ORDER BY lt.name'
+$transferHistory = db()->prepare(
+    "SELECT t.*, d1.name AS from_name, d2.name AS to_name FROM transfers t
+     LEFT JOIN departments d1 ON d1.id = t.from_department_id
+     LEFT JOIN departments d2 ON d2.id = t.to_department_id
+     WHERE t.personnel_id = ? ORDER BY t.transfer_date DESC"
 );
-$entStmt->execute(['id' => $id, 'year' => $currentYear]);
-$entitlements = $entStmt->fetchAll();
+$transferHistory->execute([$id]);
+$transfers = $transferHistory->fetchAll();
 
-$histStmt = db()->prepare(
-    'SELECT la.application_no, lt.name AS leave_type, la.status,
-            la.proceeding_date, la.expected_resumption_date, la.days_requested
-     FROM leave_applications la
-     JOIN leave_types lt ON lt.id = la.leave_type_id
-     WHERE la.personnel_id = :id
-     ORDER BY la.created_at DESC
-     LIMIT 15'
-);
-$histStmt->execute(['id' => $id]);
-$history = $histStmt->fetchAll();
+$nextOfKin = db()->prepare('SELECT * FROM personnel_next_of_kin WHERE personnel_id = ? ORDER BY kin_number ASC');
+$nextOfKin->execute([$id]);
+$kinRecords = $nextOfKin->fetchAll();
 
-$fullName = trim($person['first_name'] . ' ' . ($person['middle_name'] ? $person['middle_name'] . ' ' : '') . $person['surname']);
+$featuredStmt = db()->prepare('SELECT id FROM featured_staff WHERE personnel_id = ?');
+$featuredStmt->execute([$id]);
+$featuredEntry = $featuredStmt->fetch();
 
-$statusBadgeClass = [
-    'pending' => 'badge-pending', 'approved' => 'badge-approved', 'disapproved' => 'badge-disapproved',
-    'draft' => 'text-bg-secondary', 'cancelled' => 'text-bg-secondary', 'curtailed' => 'text-bg-secondary',
-    'completed' => 'text-bg-secondary',
-];
+$pageTitle = $p['full_name'];
+include __DIR__ . '/../includes/header.php';
 
-$pageTitle = 'Personnel Profile';
-require __DIR__ . '/../includes/header.php';
+$statusBadge = ['Active'=>'badge-active','Retired'=>'badge-retired','Transferred'=>'badge-transferred','Suspended'=>'badge-suspended','Archived'=>'badge-archived'];
 ?>
 
-<div class="row g-4">
-    <div class="col-lg-4">
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="text-muted small font-monospace mb-1"><?= e($person['f_ap_number']) ?></div>
-                    <?php if (current_user_has_permission('administration.manage')): ?>
-                    <a href="<?= base_url('personnel/edit.php?id=' . $person['id']) ?>" class="text-muted small text-decoration-none">
-                        <i class="bi bi-pencil"></i> Edit
-                    </a>
-                    <?php endif; ?>
-                </div>
-                <h2 class="h5 mb-1"><?= e($fullName) ?></h2>
-                <div class="text-muted mb-3"><?= e($person['rank_name']) ?> · <?= e($person['department_name']) ?></div>
-
-                <dl class="row small mb-0">
-                    <dt class="col-5 text-muted">Section</dt><dd class="col-7"><?= e($person['section_name'] ?? '—') ?></dd>
-                    <dt class="col-5 text-muted">Command</dt><dd class="col-7"><?= e($person['command_name'] ?? '—') ?></dd>
-                    <dt class="col-5 text-muted">Phone</dt><dd class="col-7"><?= e($person['phone'] ?? '—') ?></dd>
-                    <dt class="col-5 text-muted">Email</dt><dd class="col-7"><?= e($person['email'] ?? '—') ?></dd>
-                    <dt class="col-5 text-muted">Status</dt><dd class="col-7"><?= e(str_replace('_', ' ', $person['status'])) ?></dd>
-                </dl>
-            </div>
-        </div>
-
-        <?php if ($canApply): ?>
-        <a href="<?= base_url('leave/apply.php?personnel_id=' . $person['id']) ?>" class="btn btn-npf-gold w-100">
-            <i class="bi bi-file-earmark-plus"></i> Apply for Leave
-        </a>
-        <?php endif; ?>
-    </div>
-
-    <div class="col-lg-8">
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="h6 mb-0"><?= $currentYear ?> Leave Entitlement &amp; Balance</h2>
-                    <?php if (current_user_has_permission('administration.manage')): ?>
-                    <a href="<?= base_url('administration/entitlements.php?personnel_id=' . $person['id'] . '&year=' . $currentYear) ?>" class="btn btn-sm btn-outline-dark">
-                        <i class="bi bi-pencil"></i> Set Entitlement
-                    </a>
-                    <?php endif; ?>
-                </div>
-                <?php if (!$entitlements): ?>
-                    <p class="text-muted small mb-0">
-                        No entitlements configured for <?= $currentYear ?> yet.
-                        <?php if (current_user_has_permission('administration.manage')): ?>
-                        <a href="<?= base_url('administration/entitlements.php?personnel_id=' . $person['id'] . '&year=' . $currentYear) ?>">Set one now.</a>
-                        <?php endif; ?>
-                    </p>
-                <?php else: ?>
-                <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead><tr><th>Leave Type</th><th>Entitled</th><th>Used</th><th>Balance</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($entitlements as $ent): $balance = $ent['entitled_days'] - $ent['used_days']; ?>
-                        <tr>
-                            <td><?= e($ent['leave_type']) ?></td>
-                            <td><?= (int)$ent['entitled_days'] ?></td>
-                            <td><?= (int)$ent['used_days'] ?></td>
-                            <td class="fw-semibold <?= $balance <= 0 ? 'text-danger' : '' ?>"><?= $balance ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <h2 class="h6 mb-3">Leave History</h2>
-                <?php if (!$history): ?>
-                    <p class="text-muted small mb-0">No leave applications on record yet.</p>
-                <?php else: ?>
-                <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <thead><tr><th>Application No.</th><th>Type</th><th>Days</th><th>Proceeding</th><th>Resume</th><th>Status</th></tr></thead>
-                    <tbody>
-                    <?php foreach ($history as $h): ?>
-                        <tr>
-                            <td class="font-monospace small"><?= e($h['application_no']) ?></td>
-                            <td><?= e($h['leave_type']) ?></td>
-                            <td><?= (int)$h['days_requested'] ?></td>
-                            <td><?= e($h['proceeding_date']) ?></td>
-                            <td><?= e($h['expected_resumption_date'] ?? '—') ?></td>
-                            <td><span class="badge badge-status <?= $statusBadgeClass[$h['status']] ?? 'text-bg-secondary' ?>"><?= e($h['status']) ?></span></td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h4 class="mb-0"><?= e($p['full_name']) ?> <span class="badge <?= $statusBadge[$p['status']] ?? 'bg-secondary' ?>"><?= e($p['status']) ?></span></h4>
+    <div class="text-muted"><?= e($p['rank_name']) ?> &middot; <?= e($p['ap_number']) ?></div>
+  </div>
+  <div>
+    <?php if (in_array($user['role_name'], ['Super Administrator','Administrator','Documentation Officer'])): ?>
+    <a href="<?= BASE_URL ?>/personnel/edit.php?id=<?= $p['id'] ?>" class="btn btn-primary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+    <?php endif; ?>
+    <a href="<?= BASE_URL ?>/reports/export_pdf.php?id=<?= $p['id'] ?>"
+   target="_blank"
+   rel="noopener noreferrer"
+   class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-printer"></i> Print Verification Slip
+   </a>
+    <?php if (has_permission('settings.featured_staff')): ?>
+      <?php if ($featuredEntry): ?>
+        <a href="<?= BASE_URL ?>/settings/featured_staff_delete.php?id=<?= $featuredEntry['id'] ?>&redirect_to=<?= urlencode('/personnel/view.php?id=' . $p['id']) ?>"
+           class="btn btn-outline-warning btn-sm" data-confirm="Remove <?= e($p['full_name']) ?> from the front page?">
+           <i class="bi bi-star-fill"></i> Remove from Front Page</a>
+      <?php else: ?>
+        <form method="post" action="<?= BASE_URL ?>/settings/featured_staff_save.php" class="d-inline">
+          <?= csrf_field() ?>
+          <input type="hidden" name="personnel_id" value="<?= $p['id'] ?>">
+          <input type="hidden" name="redirect_to" value="/personnel/view.php?id=<?= $p['id'] ?>">
+          <button type="submit" class="btn btn-outline-warning btn-sm"><i class="bi bi-star"></i> Feature on Front Page</button>
+        </form>
+      <?php endif; ?>
+    <?php endif; ?>
+  </div>
 </div>
 
-<?php require __DIR__ . '/../includes/footer.php'; ?>
+<div class="row g-3">
+  <div class="col-md-3 text-center">
+    <img src="<?= e(url($p['photo_path'] ?: '/uploads/officer.png')) ?>" class="img-fluid rounded border">
+  </div>
+  <div class="col-md-9">
+    <div class="row">
+      <div class="col-md-6">
+        <table class="table table-sm">
+          <tr><th width="45%">Gender</th><td><?= e($p['gender']) ?></td></tr>
+          <tr><th>Date of Birth</th><td><?= format_date($p['date_of_birth']) ?> <?php $a = age_from_dob($p['date_of_birth']); if ($a) echo "($a yrs)"; ?></td></tr>
+          <tr><th>State of Origin</th><td><?= e($p['state_name']) ?></td></tr>
+          <tr><th>LGA</th><td><?= e($p['lga_name']) ?></td></tr>
+          <tr><th>Tribe</th><td><?= e($p['tribe_name']) ?></td></tr>
+          <tr><th>Geopolitical Zone</th><td><?= e($p['zone_name']) ?></td></tr>
+          <tr><th>Phone</th><td><?= e($p['phone_number']) ?></td></tr>
+          <tr><th>Email</th><td><?= e($p['email_address']) ?></td></tr>
+        </table>
+      </div>
+      <div class="col-md-6">
+        <table class="table table-sm">
+          <tr><th width="45%">Department</th><td><?= e($p['dept_name']) ?></td></tr>
+          <tr><th>Duty Post</th><td><?= e($p['duty_post']) ?></td></tr>
+          <tr><th>Date of Enlistment</th><td><?= format_date($p['date_of_enlistment']) ?></td></tr>
+          <tr><th>Last Promotion</th><td><?= format_date($p['date_of_last_promotion']) ?></td></tr>
+          <tr><th>Date of Retirement</th><td><?= format_date($p['date_of_retirement']) ?></td></tr>
+          <tr><th>Grade Level</th><td><?= e($p['grade_level']) ?></td></tr>
+          <tr><th>Employee Code</th><td><?= e($p['employee_code']) ?></td></tr>
+          <tr><th>IPPIS Number</th><td><?= e($p['ippis_number']) ?></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-md-6">
+    <div class="card"><div class="card-header bg-white">Financial Information</div>
+      <table class="table table-sm mb-0">
+        <tr><th width="45%">Bank</th><td><?= e($p['bank_name']) ?></td></tr>
+        <tr><th>Account Number</th><td><?= e($p['account_number']) ?></td></tr>
+        <tr><th>PFA</th><td><?= e($p['pfa_name']) ?></td></tr>
+        <tr><th>Pension PIN</th><td><?= e($p['pension_pin']) ?></td></tr>
+        <tr><th>NHF Number</th><td><?= e($p['nhf_number']) ?></td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card"><div class="card-header bg-white">Education & Other</div>
+      <table class="table table-sm mb-0">
+        <tr><th width="45%">Educational Qualification</th><td><?= e($p['educational_qualification']) ?></td></tr>
+        <tr><th>GD/SP</th><td><?= e($p['gd_sp']) ?></td></tr>
+        <tr><th>MSS</th><td><?= e($p['mss']) ?></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header bg-white">Next of Kin</div>
+  <div class="card-body">
+    <div class="row">
+      <?php for ($k = 1; $k <= 2; $k++): $kin = null; foreach ($kinRecords as $r) if ((int)$r['kin_number'] === $k) $kin = $r; ?>
+      <div class="col-md-6">
+        <h6 class="text-primary">Next of Kin <?= $k ?></h6>
+        <?php if ($kin && ($kin['full_name'] || $kin['phone_number'])): ?>
+        <table class="table table-sm mb-3">
+          <tr><th width="45%">Full Name</th><td><?= e($kin['full_name']) ?></td></tr>
+          <tr><th>Relationship</th><td><?= e($kin['relationship']) ?></td></tr>
+          <tr><th>Email Address</th><td><?= e($kin['email_address']) ?></td></tr>
+          <tr><th>Residential Address</th><td><?= e($kin['residential_address']) ?></td></tr>
+          <tr><th>Phone Number</th><td><?= e($kin['phone_number']) ?></td></tr>
+          <tr><th>Alt. Phone Number</th><td><?= e($kin['alt_phone_number']) ?></td></tr>
+        </table>
+        <?php else: ?>
+        <p class="text-muted small">Not provided.</p>
+        <?php endif; ?>
+      </div>
+      <?php endfor; ?>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header bg-white">Remarks</div>
+  <div class="card-body">
+    <?= nl2br(e($p['remarks'])) ?: '<span class="text-muted">None.</span>' ?>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header bg-white">Transfer History</div>
+  <ul class="list-group list-group-flush">
+    <?php if (!$transfers): ?><li class="list-group-item text-muted small">No transfer history recorded.</li><?php endif; ?>
+    <?php foreach ($transfers as $t): ?>
+      <li class="list-group-item small"><?= e($t['from_name'] ?: '—') ?> &rarr; <?= e($t['to_name'] ?: '—') ?> on <?= format_date($t['transfer_date']) ?></li>
+    <?php endforeach; ?>
+  </ul>
+</div>
+
+<?php include __DIR__ . '/../includes/footer.php'; ?>

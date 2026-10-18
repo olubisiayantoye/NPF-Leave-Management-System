@@ -1,0 +1,14 @@
+Options -Indexes
+
+<FilesMatch "\.(sql|md)$">
+    Require all denied
+</FilesMatch>
+
+RewriteEngine On
+RewriteRule ^config/ - [F,L]
+RewriteRule ^includes/ - [F,L]
+RewriteRule ^database/ - [F,L]
+
+# After running setup.php once and deleting it, this block becomes irrelevant.
+# Consider also moving /config and /includes entirely outside the web root
+# in a production deployment for defense in depth.

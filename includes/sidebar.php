@@ -1,89 +1,61 @@
-<?php
-/**
- * Sidebar nav. Included by header.php. Uses $user (from current_user())
- * and current script path to highlight the active link.
- *
- * Menu order follows the spec exactly: Dashboard, Personnel, My
- * Application, Notification, Leave Scheduled, Reports, Settings, Audit
- * Log. The two "queue" links (Administration Officer review / PSO final
- * decision) aren't part of that named list, but someone in those roles
- * needs a way to reach their queue — they're added as a supplementary
- * "Leave Review" section rather than replacing any of the 8 named items.
- */
-$current = $_SERVER['SCRIPT_NAME'];
-$active = fn(string $needle) => str_contains($current, $needle) ? 'active' : '';
+<?php $role = $user['role_name'] ?? ''; $path = $_SERVER['SCRIPT_NAME']; function nav_active($needle,$path){return strpos($path,$needle)!==false ? 'active' : '';} ?>
+<aside class="nrms-sidebar">
+  <ul class="nav flex-column">
+    <li class="nav-item"><a class="nav-link <?= nav_active('dashboard.php',$path) ?>" href="<?= BASE_URL ?>/dashboard.php"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
 
-$canManagePersonnel = current_user_has_permission('personnel.manage');
-$canSearchPersonnel = current_user_has_permission('personnel.search');
-$canApplyLeave = current_user_has_permission('leave.apply');
-$canReviewSoa = current_user_has_permission('leave.review_soa');
-$canDecide = current_user_has_permission('leave.approve');
-$canManageAdmin = current_user_has_permission('administration.manage');
-$canViewAudit = current_user_has_permission('audit.view');
-$canViewReports = current_user_has_permission('reports.view');
-?>
-<aside class="app-sidebar">
-    <a class="brand" href="<?= base_url('dashboard/index.php') ?>">
-        <span class="brand-mark">✺</span>
-        <span>
-            <strong>NPF · LMS</strong>
-            <small>Leave Management</small>
-        </span>
-    </a>
-    <nav>
-        <a href="<?= base_url('dashboard/index.php') ?>" class="<?= $active('/dashboard/') ?>">
-            <i class="bi bi-grid"></i> Dashboard
-        </a>
+    <li class="nav-item"><a class="nav-link <?= nav_active('/personnel/',$path) ?>" href="<?= BASE_URL ?>/personnel/list.php"><i class="bi bi-people"></i> Personnel</a></li>
 
-        <?php if ($canManagePersonnel || $canSearchPersonnel): ?>
-        <a href="<?= base_url($canManagePersonnel ? 'personnel/index.php' : 'personnel/search.php') ?>" class="<?= $active('/personnel/') ?>">
-            <i class="bi bi-people"></i> Personnel
-        </a>
-        <?php endif; ?>
+    <?php if (in_array($role, ['Super Administrator','Administrator','Documentation Officer'])): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('personnel/add.php',$path) ?>" href="<?= BASE_URL ?>/personnel/add.php"><i class="bi bi-person-plus"></i> Register Personnel</a></li>
+    <?php endif; ?>
 
-        <?php if ($canApplyLeave): ?>
-        <a href="<?= base_url('leave/index.php') ?>" class="<?= $active('/leave/index') ?>">
-            <i class="bi bi-file-earmark-text"></i> My Application
-        </a>
-        <?php endif; ?>
+    <?php if (in_array($role, ['Super Administrator','Administrator'])): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('/transfers/',$path) ?>" href="<?= BASE_URL ?>/transfers/list.php"><i class="bi bi-arrow-left-right"></i> Transfers</a></li>
+    <li class="nav-item"><a class="nav-link <?= nav_active('bulk_upload.php',$path) ?>" href="<?= BASE_URL ?>/bulk_upload.php"><i class="bi bi-file-earmark-excel"></i> Bulk Upload</a></li>
+    <?php endif; ?>
 
-        <a href="<?= base_url('notifications/index.php') ?>" class="<?= $active('/notifications/') ?>">
-            <i class="bi bi-bell"></i> Notification
-        </a>
+    <li class="nav-item"><a class="nav-link <?= nav_active('/verification/',$path) ?>" href="<?= BASE_URL ?>/verification/search.php"><i class="bi bi-patch-check"></i> Verification</a></li>
 
-        <?php if ($canReviewSoa || $canDecide): ?>
-        <div class="nav-section">Leave Review</div>
-        <?php if ($canReviewSoa): ?>
-        <a href="<?= base_url('approvals/soa_review.php') ?>" class="<?= $active('/soa_review') ?>">
-            <i class="bi bi-clipboard-check"></i> Review Queue
-        </a>
-        <?php endif; ?>
-        <?php if ($canDecide): ?>
-        <a href="<?= base_url('approvals/pending.php') ?>" class="<?= $active('/approvals/pending') ?>">
-            <i class="bi bi-hourglass-split"></i> Decision Queue
-        </a>
-        <?php endif; ?>
-        <?php endif; ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('/reports/',$path) ?>" href="<?= BASE_URL ?>/reports/nominal_roll.php"><i class="bi bi-file-earmark-text"></i> Nominal Roll / Reports</a></li>
 
-        <?php if ($canViewReports): ?>
-        <a href="<?= base_url('leave/scheduled.php') ?>" class="<?= $active('/scheduled') ?>">
-            <i class="bi bi-calendar3"></i> Leave Scheduled
-        </a>
-        <a href="<?= base_url('reports/index.php') ?>" class="<?= $active('/reports/') ?>">
-            <i class="bi bi-bar-chart"></i> Reports
-        </a>
-        <?php endif; ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('/allowance/list.php',$path) ?>" href="<?= BASE_URL ?>/allowance/list.php"><i class="bi bi-cash-coin"></i> Monthly Allowance</a></li>
 
-        <?php if ($canManageAdmin): ?>
-        <a href="<?= base_url('administration/index.php') ?>" class="<?= $active('/administration/') ?>">
-            <i class="bi bi-gear"></i> Settings
-        </a>
-        <?php endif; ?>
+    <?php if (in_array($role, ['Super Administrator','Administrator','Documentation Officer'])): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('allowance/add.php',$path) ?>" href="<?= BASE_URL ?>/allowance/add.php"><i class="bi bi-person-plus"></i> Register Allowance Personnel</a></li>
+    <?php endif; ?>
 
-        <?php if ($canViewAudit): ?>
-        <a href="<?= base_url('audit/index.php') ?>" class="<?= $active('/audit/') ?>">
-            <i class="bi bi-clock-history"></i> Audit Log
-        </a>
-        <?php endif; ?>
-    </nav>
+    <?php if (in_array($role, ['Super Administrator','Administrator'])): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('allowance/bulk_upload.php',$path) ?>" href="<?= BASE_URL ?>/allowance/bulk_upload.php"><i class="bi bi-file-earmark-excel"></i> Allowance Bulk Upload</a></li>
+    <?php endif; ?>
+
+    <li class="nav-item"><a class="nav-link <?= nav_active('allowance/report.php',$path) ?>" href="<?= BASE_URL ?>/allowance/report.php"><i class="bi bi-file-earmark-bar-graph"></i> Allowance Reports</a></li>
+
+    <?php if (in_array($role, ['Super Administrator','Administrator'])): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('/users/',$path) ?>" href="<?= BASE_URL ?>/users/list.php"><i class="bi bi-person-badge"></i> User Management</a></li>
+    <?php endif; ?>
+
+    <?php if ($role === 'Super Administrator'): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('audit_logs.php',$path) ?>" href="<?= BASE_URL ?>/audit_logs.php"><i class="bi bi-clock-history"></i> Audit Trail</a></li>
+    <?php endif; ?>
+
+    <?php if (has_permission('settings.roles') || has_permission('settings.permissions') || has_permission('settings.system') || has_permission('settings.lookups') || has_permission('settings.featured_staff')): ?>
+    <li class="nav-item mt-2"><span class="nav-link text-uppercase small text-muted" style="letter-spacing:.05em;">Settings</span></li>
+    <li class="nav-item"><a class="nav-link <?= nav_active('/settings/index.php',$path) ?>" href="<?= BASE_URL ?>/settings/index.php"><i class="bi bi-sliders"></i> Settings Overview</a></li>
+    <?php if (has_permission('settings.roles')): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('settings/roles.php',$path) . nav_active('settings/role_edit.php',$path) ?>" href="<?= BASE_URL ?>/settings/roles.php"><i class="bi bi-person-badge"></i> Role Management</a></li>
+    <?php endif; ?>
+    <?php if (has_permission('settings.permissions')): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('settings/permissions.php',$path) ?>" href="<?= BASE_URL ?>/settings/permissions.php"><i class="bi bi-key"></i> Permissions</a></li>
+    <?php endif; ?>
+    <?php if (has_permission('settings.system')): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('settings/system_settings.php',$path) ?>" href="<?= BASE_URL ?>/settings/system_settings.php"><i class="bi bi-gear"></i> System Settings</a></li>
+    <?php endif; ?>
+    <?php if (has_permission('settings.lookups')): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('settings/lookup',$path) ?>" href="<?= BASE_URL ?>/settings/lookups.php"><i class="bi bi-list-check"></i> Lookup Management</a></li>
+    <?php endif; ?>
+    <?php if (has_permission('settings.featured_staff')): ?>
+    <li class="nav-item"><a class="nav-link <?= nav_active('settings/featured_staff',$path) ?>" href="<?= BASE_URL ?>/settings/featured_staff.php"><i class="bi bi-people"></i> Front Page Featured Staff</a></li>
+    <?php endif; ?>
+    <?php endif; ?>
+  </ul>
 </aside>
