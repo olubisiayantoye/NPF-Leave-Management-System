@@ -1,0 +1,89 @@
+/* NPF-LMS — internal application theme (Bootstrap 5 base) */
+
+:root {
+    --npf-black:  #0B0E0C;
+    --npf-green:  #14301F;
+    --npf-green-2:#1B3D28;
+    --npf-gold:   #C9A227;
+    --npf-gold-2: #B8901E;
+    --npf-paper:  #F6F4EE;
+    --npf-ink:    #23271F;
+
+    --bs-body-bg: var(--npf-paper);
+    --bs-body-color: var(--npf-ink);
+    --bs-primary: var(--npf-green);
+    --bs-primary-rgb: 20,48,31;
+}
+
+body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+
+.app-shell { display: flex; min-height: 100vh; }
+
+/* --- Sidebar --- */
+.app-sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--npf-black);
+    color: #C9CFC7;
+    display: flex;
+    flex-direction: column;
+}
+.app-sidebar .brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 20px 18px;
+    border-bottom: 1px solid rgba(201,162,39,0.18);
+    color: #fff;
+}
+.app-sidebar .brand-mark {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--npf-gold); color: var(--npf-gold);
+    display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+}
+.app-sidebar .brand strong { font-size: 0.92rem; display:block; line-height:1.2; }
+.app-sidebar .brand small { font-size: 0.65rem; color: #8A9389; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.app-sidebar nav { padding: 14px 10px; flex: 1; }
+.app-sidebar nav a {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; margin-bottom: 2px;
+    border-radius: 4px; font-size: 0.87rem; color: #C9CFC7;
+    text-decoration: none;
+}
+.app-sidebar nav a:hover { background: rgba(201,162,39,0.1); color: #fff; }
+.app-sidebar nav a.active { background: var(--npf-green-2); color: var(--npf-gold); font-weight: 600; }
+.app-sidebar nav .nav-section {
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #6E766B; margin: 16px 12px 6px;
+}
+
+/* --- Topbar --- */
+.app-main { flex: 1; min-width: 0; }
+.app-topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 26px;
+    background: #fff;
+    border-bottom: 1px solid rgba(35,39,31,0.08);
+}
+.app-topbar h1 { font-size: 1.1rem; margin: 0; font-family: 'Spectral', serif; }
+.app-content { padding: 26px; }
+
+/* --- Cards / stat tiles --- */
+.stat-tile {
+    background: #fff; border: 1px solid rgba(35,39,31,0.08); border-radius: 6px;
+    padding: 18px 20px;
+}
+.stat-tile .value { font-family: 'IBM Plex Mono', monospace; font-size: 1.6rem; font-weight: 600; color: var(--npf-green); }
+.stat-tile .label { font-size: 0.78rem; color: #6E766B; }
+
+.badge-status { font-family: 'IBM Plex Mono', monospace; font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase; font-size: 0.68rem; }
+.badge-pending     { background: #F4E7C5; color: #8A6D10; }
+.badge-approved    { background: #D9EAD9; color: #2E6B2E; }
+.badge-disapproved { background: #F3D8D8; color: #8A2A2A; }
+
+.btn-npf-gold { background: var(--npf-gold); border-color: var(--npf-gold); color: var(--npf-black); font-weight: 600; }
+.btn-npf-gold:hover { background: var(--npf-gold-2); border-color: var(--npf-gold-2); color: var(--npf-black); }
+
+@media (max-width: 860px) {
+    .app-sidebar { position: fixed; left: -240px; top: 0; bottom: 0; z-index: 40; transition: left 0.2s ease; }
+    .app-sidebar.open { left: 0; }
+}

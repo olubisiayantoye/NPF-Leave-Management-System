@@ -1,0 +1,7 @@
+[11-Sep-2026 14:32:40 UTC] DB connection failed: SQLSTATE[HY000] [1045] Access denied for user 'root'@'localhost' (using password: NO)
+[11-Sep-2026 14:37:21 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'berriezl_npf_leave_management.users' doesn't exist in /home/berriezl/public_html/magnivoice/npf-leave-management/includes/auth.php:146
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/npf-leave-management/includes/auth.php(146): PDO->prepare('SELECT * FROM u...')
+#1 /home/berriezl/public_html/magnivoice/npf-leave-management/auth/login.php(24): attempt_login('superadmin', 'Demo@12345')
+#2 {main}
+  thrown in /home/berriezl/public_html/magnivoice/npf-leave-management/includes/auth.php on line 146

@@ -1,0 +1,12 @@
+[12-Sep-2026 07:29:31 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in /home/berriezl/public_html/magnivoice/npf-leave-management/includes/functions.php:135
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/npf-leave-management/includes/functions.php(135): PDOStatement->execute(Array)
+#1 /home/berriezl/public_html/magnivoice/npf-leave-management/api/personnel_search.php(18): search_personnel('315443')
+#2 {main}
+  thrown in /home/berriezl/public_html/magnivoice/npf-leave-management/includes/functions.php on line 135
+[12-Sep-2026 07:38:23 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in /home/berriezl/public_html/magnivoice/npf-leave-management/includes/functions.php:135
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/npf-leave-management/includes/functions.php(135): PDOStatement->execute(Array)
+#1 /home/berriezl/public_html/magnivoice/npf-leave-management/api/personnel_search.php(18): search_personnel('324556')
+#2 {main}
+  thrown in /home/berriezl/public_html/magnivoice/npf-leave-management/includes/functions.php on line 135

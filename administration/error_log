@@ -1,0 +1,14 @@
+[11-Sep-2026 14:39:30 UTC] PHP Fatal error:  Uncaught TypeError: Cannot access offset of type string on string in /home/berriezl/public_html/magnivoice/npf-leave-management/administration/roles.php:68
+Stack trace:
+#0 {main}
+  thrown in /home/berriezl/public_html/magnivoice/npf-leave-management/administration/roles.php on line 68
+[12-Sep-2026 07:53:05 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'berriezl_npf_leave_management.public_holidays' doesn't exist in /home/berriezl/public_html/magnivoice/npf-leave-management/administration/holidays.php:59
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/npf-leave-management/administration/holidays.php(59): PDO->query('SELECT id, holi...')
+#1 {main}
+  thrown in /home/berriezl/public_html/magnivoice/npf-leave-management/administration/holidays.php on line 59
+[12-Sep-2026 08:08:18 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'berriezl_npf_leave_management.public_holidays' doesn't exist in /home/berriezl/public_html/magnivoice/npf-leave-management/administration/holidays.php:59
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/npf-leave-management/administration/holidays.php(59): PDO->query('SELECT id, holi...')
+#1 {main}
+  thrown in /home/berriezl/public_html/magnivoice/npf-leave-management/administration/holidays.php on line 59
