@@ -1,0 +1,9 @@
+[12-Sep-2026 15:02:25 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[HY093]: Invalid parameter number in /home/berriezl/public_html/magnivoice/npf-leave-management/personnel/index.php:22
+Stack trace:
+#0 /home/berriezl/public_html/magnivoice/npf-leave-management/personnel/index.php(22): PDOStatement->execute(Array)
+#1 {main}
+  thrown in /home/berriezl/public_html/magnivoice/npf-leave-management/personnel/index.php on line 22
+[12-Sep-2026 15:06:34 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in /home/berriezl/public_html/magnivoice/npf-leave-management/config/config.php on line 90
+[12-Sep-2026 15:06:34 UTC] PHP Warning:  ini_set(): Session ini settings cannot be changed after headers have already been sent in /home/berriezl/public_html/magnivoice/npf-leave-management/config/config.php on line 91
+[12-Sep-2026 15:06:34 UTC] PHP Warning:  session_start(): Session cannot be started after headers have already been sent in /home/berriezl/public_html/magnivoice/npf-leave-management/config/config.php on line 92
+[12-Sep-2026 15:06:34 UTC] PHP Warning:  Cannot modify header information - headers already sent by (output started at /home/berriezl/public_html/magnivoice/npf-leave-management/personnel/index.php:1) in /home/berriezl/public_html/magnivoice/npf-leave-management/includes/functions.php on line 31

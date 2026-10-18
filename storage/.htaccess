@@ -1,0 +1,8 @@
+# Defense in depth: even if this folder ends up inside a web-servable
+# root by mistake, Apache refuses to serve anything from it directly.
+# The real protection is that every download goes through
+# leave/attachment_download.php, which checks the requester is actually
+# entitled to the file — but this costs nothing extra to also have.
+Require all denied
+Order deny,allow
+Deny from all
